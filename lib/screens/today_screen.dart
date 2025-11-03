@@ -123,7 +123,7 @@ class TodayScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    day['day']!,
+                    day['day'] as String,
                     style: TextStyle(
                       color: isSelected ? Colors.black : Colors.grey[500],
                       fontSize: 12,
@@ -131,7 +131,7 @@ class TodayScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    day['date']!,
+                    day['date'] as String,
                     style: TextStyle(
                       color: isSelected ? Colors.black : Colors.white,
                       fontSize: 18,

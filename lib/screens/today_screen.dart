@@ -159,6 +159,7 @@ class TodayScreen extends StatelessWidget {
               duration: '30m',
               title: '',
               isPast: true,
+              lineHeight: 50,
             ),
             _buildTimelineItem(
               time: '9:15 AM',
@@ -167,6 +168,7 @@ class TodayScreen extends StatelessWidget {
               hasNotification: true,
               hasCalendar: true,
               hasTimer: true,
+              lineHeight: 100,
             ),
             _buildTimelineItem(
               time: '10:00 AM',
@@ -175,6 +177,7 @@ class TodayScreen extends StatelessWidget {
               isHighlighted: true,
               hasNotification: true,
               currentTime: '11:23 AM',
+              lineHeight: 210,
             ),
             _buildTimelineItem(
               time: '12:30 PM',
@@ -183,6 +186,7 @@ class TodayScreen extends StatelessWidget {
               emoji: '🍕',
               hasLock: true,
               hasTimer: true,
+              lineHeight: 130,
             ),
             _buildFreeTime(),
             _buildTimelineItem(
@@ -211,6 +215,7 @@ class TodayScreen extends StatelessWidget {
     String? emoji,
     String? currentTime,
     bool isLast = false,
+    double lineHeight = 80,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +263,7 @@ class TodayScreen extends StatelessWidget {
             if (!isLast)
               Container(
                 width: 2,
-                height: isHighlighted ? 180 : 80,
+                height: lineHeight,
                 decoration: BoxDecoration(
                   gradient: currentTime != null
                       ? const LinearGradient(
@@ -410,35 +415,54 @@ class TodayScreen extends StatelessWidget {
   }
 
   Widget _buildFreeTime() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          const SizedBox(width: 80),
-          Icon(
-            Icons.hourglass_empty,
-            color: Colors.grey[600],
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '3h 15m',
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(width: 80),
+        // Timeline line continues through free time
+        Column(
+          children: [
+            Container(
+              width: 2,
+              height: 40,
+              color: Colors.grey[800],
+            ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        // Free time content
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.hourglass_empty,
+                  color: Colors.grey[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '3h 15m',
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Free time',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            'Free time',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

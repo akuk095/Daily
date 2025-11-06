@@ -1,8 +1,69 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'archive_screen.dart';
 
-class TodayScreen extends StatelessWidget {
+class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
+
+  @override
+  State<TodayScreen> createState() => _TodayScreenState();
+}
+
+class _TodayScreenState extends State<TodayScreen> {
+  final PageController _pageController = PageController(
+    viewportFraction: 0.85,
+    initialPage: DateTime.now().hour,
+  );
+
+  // Sample hourly tasks - will be replaced with real data later
+  final List<HourlyTask> tasks = List.generate(24, (index) {
+    // Add some sample tasks
+    if (index == 8) {
+      return HourlyTask(
+        hour: index,
+        title: 'Morning Routine',
+        emoji: '☀️',
+        duration: 1,
+      );
+    } else if (index == 9) {
+      return HourlyTask(
+        hour: index,
+        title: 'Work Block',
+        emoji: '💼',
+        duration: 4,
+        isBlock: true,
+      );
+    } else if (index == 13) {
+      return HourlyTask(
+        hour: index,
+        title: 'Lunch Break',
+        emoji: '🍕',
+        duration: 1,
+      );
+    } else if (index == 17) {
+      return HourlyTask(
+        hour: index,
+        title: 'Gym',
+        emoji: '💪',
+        duration: 1,
+      );
+    } else if (index == 23) {
+      return HourlyTask(
+        hour: index,
+        title: 'Sleep',
+        emoji: '😴',
+        duration: 8,
+        isBlock: true,
+      );
+    }
+    return HourlyTask(hour: index, title: '', duration: 1);
+  });
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +75,7 @@ class TodayScreen extends StatelessWidget {
             _buildHeader(context),
             _buildWeekCalendar(),
             Expanded(
-              child: _buildTimeline(),
+              child: _buildCarouselTimeline(),
             ),
           ],
         ),
@@ -147,322 +208,220 @@ class TodayScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeline() {
-    return SingleChildScrollView(
+  Widget _buildCarouselTimeline() {
+    return Stack(
+      children: [
+        // Timeline line in the center background
+        Positioned.fill(
+          child: Center(
+            child: Container(
+              width: 2,
+              margin: const EdgeInsets.symmetric(vertical: 40),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.grey[800]!,
+                    Colors.grey[700]!,
+                    Colors.grey[800]!,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Carousel of tiles
+        PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.vertical,
+          itemCount: tasks.length,
+          itemBuilder: (context, index) {
+            return AnimatedBuilder(
+              animation: _pageController,
+              builder: (context, child) {
+                double value = 1.0;
+                if (_pageController.position.haveDimensions) {
+                  value = _pageController.page! - index;
+                  value = (1 - (value.abs() * 0.3)).clamp(0.7, 1.0);
+                }
+
+                return Center(
+                  child: SizedBox(
+                    height: Curves.easeInOut.transform(value) * 280,
+                    child: child,
+                  ),
+                );
+              },
+              child: _buildHourlyTile(tasks[index]),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHourlyTile(HourlyTask task) {
+    final isCurrentHour = task.hour == DateTime.now().hour;
+    final hasTask = task.title.isNotEmpty;
+
+    return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 20),
-            _buildTimelineItem(
-              time: '08:00 AM',
-              duration: '30m',
-              title: '',
-              isPast: true,
-              lineHeight: 50,
+            // Circle indicator
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isCurrentHour
+                    ? const Color(0xFFB8B5FF)
+                    : hasTask
+                        ? const Color(0xFF2C2C2E)
+                        : Colors.transparent,
+                border: Border.all(
+                  color: isCurrentHour
+                      ? const Color(0xFFB8B5FF)
+                      : hasTask
+                          ? Colors.white.withOpacity(0.3)
+                          : Colors.grey[800]!,
+                  width: isCurrentHour ? 3 : 2,
+                ),
+              ),
             ),
-            _buildTimelineItem(
-              time: '9:15 AM',
-              duration: '30m',
-              title: 'Weekly catch-up',
-              hasNotification: true,
-              hasCalendar: true,
-              hasTimer: true,
-              lineHeight: 100,
+            const SizedBox(height: 16),
+            // Time label
+            Text(
+              _formatHour(task.hour),
+              style: TextStyle(
+                color: isCurrentHour ? const Color(0xFFB8B5FF) : Colors.grey[400],
+                fontSize: 16,
+                fontWeight: isCurrentHour ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
-            _buildTimelineItem(
-              time: '10:00 AM',
-              duration: '2h',
-              title: 'Finalize slides for the conference',
-              isHighlighted: true,
-              hasNotification: true,
-              currentTime: '11:23 AM',
-              lineHeight: 210,
-            ),
-            _buildTimelineItem(
-              time: '12:30 PM',
-              duration: '1h 15m',
-              title: 'Lunch with Sofia',
-              emoji: '🍕',
-              hasLock: true,
-              hasTimer: true,
-              lineHeight: 130,
-            ),
-            _buildFreeTime(),
-            _buildTimelineItem(
-              time: '',
-              duration: '',
-              title: 'Goals progress review',
-              hasNotification: true,
-              isLast: true,
-            ),
+            const SizedBox(height: 12),
+            // Task card
+            if (hasTask)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: task.isBlock
+                      ? const Color(0xFFB8B5FF).withOpacity(0.2)
+                      : const Color(0xFF2C2C2E),
+                  borderRadius: BorderRadius.circular(20),
+                  border: task.isBlock
+                      ? Border.all(
+                          color: const Color(0xFFB8B5FF),
+                          width: 2,
+                        )
+                      : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (task.emoji != null) ...[
+                          Text(
+                            task.emoji!,
+                            style: const TextStyle(fontSize: 32),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Flexible(
+                          child: Text(
+                            task.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (task.isBlock) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFB8B5FF).withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${task.duration} hour${task.duration > 1 ? 's' : ''} block',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2C2C2E).withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.grey[800]!,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Free time',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTimelineItem({
-    required String time,
-    required String duration,
-    required String title,
-    bool isPast = false,
-    bool isHighlighted = false,
-    bool hasNotification = false,
-    bool hasCalendar = false,
-    bool hasTimer = false,
-    bool hasLock = false,
-    String? emoji,
-    String? currentTime,
-    bool isLast = false,
-    double lineHeight = 80,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Timeline left side
-        SizedBox(
-          width: 80,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (time.isNotEmpty)
-                Text(
-                  time,
-                  style: TextStyle(
-                    color: isPast ? Colors.grey[700] : Colors.grey[400],
-                    fontSize: 12,
-                  ),
-                ),
-              if (duration.isNotEmpty)
-                Text(
-                  duration,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 11,
-                  ),
-                ),
-            ],
-          ),
-        ),
-        // Timeline indicator
-        Column(
-          children: [
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isHighlighted ? Colors.transparent : const Color(0xFF2C2C2E),
-                border: Border.all(
-                  color: isHighlighted ? Colors.white : Colors.grey[700]!,
-                  width: isHighlighted ? 3 : 2,
-                ),
-              ),
-            ),
-            if (!isLast)
-              Container(
-                width: 2,
-                height: lineHeight,
-                decoration: BoxDecoration(
-                  gradient: currentTime != null
-                      ? const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.white, Colors.grey],
-                        )
-                      : null,
-                  color: currentTime == null ? Colors.grey[800] : null,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        // Task card
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (title.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isHighlighted
-                        ? const Color(0xFFB8B5FF)
-                        : const Color(0xFF2C2C2E),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                if (emoji != null) ...[
-                                  Text(
-                                    emoji,
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                  const SizedBox(width: 8),
-                                ],
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: TextStyle(
-                                      color: isHighlighted ? Colors.black : Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              if (hasNotification)
-                                Icon(
-                                  Icons.notifications_none,
-                                  color: isHighlighted ? Colors.black : Colors.grey[400],
-                                  size: 20,
-                                ),
-                              if (hasCalendar) ...[
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.calendar_today_outlined,
-                                  color: Colors.grey[400],
-                                  size: 18,
-                                ),
-                              ],
-                              if (hasTimer) ...[
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.timer_outlined,
-                                  color: Colors.grey[400],
-                                  size: 20,
-                                ),
-                              ],
-                              if (hasLock) ...[
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.lock_outline,
-                                  color: Colors.grey[400],
-                                  size: 18,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                      if (currentTime != null) ...[
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF6B6B),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                currentTime,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Text(
-                              '$time  $duration',
-                              style: TextStyle(
-                                color: Colors.black.withOpacity(0.6),
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ] else if (!isHighlighted && time.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          '$time  $duration',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-      ],
-    );
+  String _formatHour(int hour) {
+    if (hour == 0) return '12:00 AM';
+    if (hour < 12) return '$hour:00 AM';
+    if (hour == 12) return '12:00 PM';
+    return '${hour - 12}:00 PM';
   }
+}
 
-  Widget _buildFreeTime() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(width: 80),
-        // Timeline line continues through free time
-        Column(
-          children: [
-            Container(
-              width: 2,
-              height: 40,
-              color: Colors.grey[800],
-            ),
-          ],
-        ),
-        const SizedBox(width: 12),
-        // Free time content
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.hourglass_empty,
-                  color: Colors.grey[600],
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '3h 15m',
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Free time',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+// Data model for hourly tasks
+class HourlyTask {
+  final int hour;
+  final String title;
+  final String? emoji;
+  final int duration; // in hours
+  final bool isBlock;
+
+  HourlyTask({
+    required this.hour,
+    required this.title,
+    this.emoji,
+    this.duration = 1,
+    this.isBlock = false,
+  });
 }
